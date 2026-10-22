@@ -70,7 +70,7 @@ dialog::backdrop{background:rgba(15,23,42,.45)}
 .dlg h2{margin:0 0 10px;font-size:19px}
 .dlg h3{margin:16px 0 6px;font-size:15px}
 .dlg li{margin-bottom:6px}
-.dlg-f{display:flex;justify-content:flex-end;padding:10px 16px;border-top:1px solid var(--line)}
+.dlg-f{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:10px 16px;border-top:1px solid var(--line)}
 .lg{border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#000}
 .lg td{border:1px solid #000;padding:2px 10px;vertical-align:middle}
 .lg td.sym{border:none;text-align:right;padding:2px 12px 2px 0}
@@ -167,7 +167,7 @@ dialog::backdrop{background:rgba(15,23,42,.45)}
         <button data-act="resetHeader">Przywróć domyślny nagłówek</button>
         <button class="primary" data-act="print">Drukuj / PDF</button>
       </div>
-      <p class="hint">W oknie drukowania wybierz drukarkę „Zapisz jako PDF” albo „Microsoft Print to PDF”.</p>
+      <p class="hint">W oknie drukowania wybierz drukarkę „Zapisz jako PDF” albo „Microsoft Print to PDF”. Potem w sekcji „Więcej ustawień” odznacz „Nagłówki i stopki”, bo inaczej na wydruku pojawią się data, tytuł i adres strony.</p>
     </details>
   </aside>
 </main>
@@ -182,14 +182,15 @@ dialog::backdrop{background:rgba(15,23,42,.45)}
       <li><b>Zacznij od osoby identyfikowanej</b>, czyli klienta, którego dotyczy praca. Program oznaczy ją podwójną linią.</li>
       <li><b>Kliknij symbol</b>, aby go zaznaczyć. W panelu po prawej wpiszesz imię, lata życia i informacje, a przyciskami „+” dodasz partnera, rodziców, rodzeństwo i dzieci. Instrukcja zaleca co najmniej trzy pokolenia.</li>
       <li><b>Kliknij linię związku</b> pod parą, aby wybrać: małżeństwo, związek nieformalny, małżeństwo w separacji albo po rozwodzie.</li>
-      <li><b>Relacje w rodzinie</b> (bardzo bliski, bliski, konfliktowy, dystans, kontakt zerwany) dodasz w panelu osoby, w części „Relacje w rodzinie”.</li>
-      <li>Program sam układa rysunek: mężczyzna po lewej, kobieta po prawej, dzieci od najstarszego (z lewej) do najmłodszego (z prawej). Symbole możesz przeciągać myszą, a „Ułóż automatycznie” cofa ręczne przesunięcia.</li>
-      <li><b>Drukuj / PDF</b> tworzy formularz nr 23, a na drugiej stronie legendę. W oknie drukowania jako drukarkę wybierz „Zapisz jako PDF” albo „Microsoft Print to PDF”.</li>
+      <li><b>Relacje w rodzinie</b> (związek bardzo bliski; związek bliski; związek bliski, ale konfliktowy; dystans; relacje konfliktowe; kontakt zerwany) dodasz w panelu osoby, w części „Relacje w rodzinie”.</li>
+      <li>Program sam układa rysunek: mężczyzna po lewej, kobieta po prawej, dzieci od najstarszego (z lewej) do najmłodszego (z prawej). Symbole możesz przeciągać myszą, a „Ułóż automatycznie” cofa ręczne przesunięcia. Wyjątek: mężczyzna z dwiema partnerkami może mieć jedną z nich po lewej stronie.</li>
+      <li><b>Drukuj / PDF</b> tworzy formularz nr 23, a na drugiej stronie legendę. W oknie drukowania jako drukarkę wybierz „Zapisz jako PDF” albo „Microsoft Print to PDF”. W sekcji „Więcej ustawień” odznacz „Nagłówki i stopki”. Szeroką rodzinę lepiej drukować w orientacji poziomej.</li>
     </ol>
     <h3>Co wpisywać przy symbolu</h3>
     <p>Dane demograficzne (wiek, miejsce zamieszkania, wykształcenie, zawód), funkcjonowanie poszczególnych osób (problemy emocjonalne, szkolne, zawodowe, zdrowotne) i wydarzenia krytyczne (separacja, rozwód, śmierć, przeprowadzki).</p>
     <h3>Zapisywanie</h3>
     <p>Praca zapisuje się sama w tej przeglądarce na tym komputerze. Żeby mieć kopię albo dokończyć genogram na innym komputerze, kliknij „Zapisz plik”, a później „Otwórz plik…”.</p>
+    <p><b>Uwaga:</b> dane zostają tylko w tej przeglądarce. Znikną po wyczyszczeniu danych przeglądarki, po zamknięciu okna prywatnego (incognito) albo w innej przeglądarce lub na innym komputerze. Strona z linku i plik na komputerze mają osobne zapisy. Przed zamknięciem zapisz plik przyciskiem „Zapisz plik”.</p>
     <p>Dane nie są nigdzie wysyłane. Program działa w całości w przeglądarce.</p>
     <h3>Skróty klawiszowe</h3>
     <p>Ctrl+Z – cofnij, Ctrl+Y – ponów, Delete – usuń zaznaczony element, Esc – odznacz.</p>
@@ -203,6 +204,18 @@ dialog::backdrop{background:rgba(15,23,42,.45)}
     <div id="legendBox"></div>
   </div>
   <div class="dlg-f"><button class="primary" data-act="closeDlg">Zamknij</button></div>
+</dialog>
+
+<dialog id="dlgPrint">
+  <div class="dlg">
+    <h2>Drobny tekst na wydruku</h2>
+    <p id="printMsg"></p>
+  </div>
+  <div class="dlg-f">
+    <button data-act="closeDlg">Anuluj</button>
+    <button data-act="printAnyway">Drukuj bez zmian</button>
+    <button class="primary" data-act="printFlip" id="btnFlip">Zmień orientację i drukuj</button>
+  </div>
 </dialog>
 
 <div id="print-root"></div>
@@ -220,12 +233,14 @@ const PARTNER_GAP = 170;    // centre distance between partners
 const SIB_GAP = 160;        // minimal distance between neighbouring family clusters
 const SINGLE_OFF = 80;      // offset of the descent line for a parent drawn without a partner
 const TEXT_W = 130;         // max width of the text under a symbol
-const UNION_DROP = 16, SIB_ABOVE = 26, SIB_LEVEL = 10, MIN_ROW = 150;
+const UNION_DROP = 16, SIB_ABOVE = 26, SIB_LEVEL = 22, MIN_ROW = 150;
 const TF = {
   n: { font: '700 13px Arial', size: 13, weight: 700, lh: 15 },
   y: { font: '12px Arial', size: 12, weight: 400, lh: 14 },
   i: { font: '11px Arial', size: 11, weight: 400, lh: 13 }
 };
+const NOTE_F = { font: '10.5px Arial', size: 10.5, lh: 12 }, NOTE_LINES = 3;
+const MIN_PRINT_PT = 6;     // smallest readable text on paper
 const KIND_LABEL = { person: 'Osoba', stillborn: 'Dziecko urodzone martwe', miscarriage: 'Poronienie naturalne', abortion: 'Poronienie sztuczne', pregnancy: 'Ciąża' };
 const UNION_LABEL = { marriage: 'Małżeństwo', informal: 'Związek nieformalny', separated: 'Małżeństwo w separacji', divorced: 'Małżeństwo po rozwodzie', single: 'Rodzic bez partnera' };
 const REL_LABEL = { very_close: 'Związek bardzo bliski', close: 'Związek bliski', close_conflict: 'Związek bliski, ale konfliktowy', distant: 'Dystans', conflict: 'Relacje konfliktowe', cutoff: 'Kontakt zerwany' };
@@ -329,10 +344,16 @@ function normalize(d) {
   if (m.orientation === 'landscape') out.meta.orientation = 'landscape';
   if (typeof m.legend === 'boolean') out.meta.legend = m.legend;
   const str = v => (v == null ? '' : String(v));
-  out.people = d.people.filter(p => p && p.id).map(p => ({
+  const has = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
+  const seenPid = new Set();
+  out.people = d.people.filter(p => {
+    if (!p || !p.id || seenPid.has(String(p.id))) return false;
+    seenPid.add(String(p.id));
+    return true;
+  }).map(p => ({
     ...PERSON_DEFAULTS,
     id: String(p.id),
-    kind: KIND_LABEL[p.kind] ? p.kind : 'person',
+    kind: has(KIND_LABEL, p.kind) ? p.kind : 'person',
     sex: p.sex === 'F' ? 'F' : 'M',
     name: str(p.name), birth: str(p.birth), death: str(p.death), age: str(p.age), info: str(p.info),
     deceased: !!p.deceased, identified: !!p.identified, adopted: !!p.adopted,
@@ -345,13 +366,13 @@ function normalize(d) {
   const ids = new Set(out.people.map(p => p.id));
   out.unions = (Array.isArray(d.unions) ? d.unions : []).filter(u => u && u.id && ids.has(String(u.a)) && (u.b == null || ids.has(String(u.b))) && u.a !== u.b).map(u => ({
     id: String(u.id), a: String(u.a), b: u.b == null ? null : String(u.b),
-    type: u.b == null ? 'single' : (UNION_LABEL[u.type] && u.type !== 'single' ? u.type : 'marriage'),
+    type: u.b == null ? 'single' : (has(UNION_LABEL, u.type) && u.type !== 'single' ? u.type : 'marriage'),
     note: str(u.note)
   }));
   const uids = new Set(out.unions.map(u => u.id));
   out.people.forEach(p => { if (p.parentUnion && !uids.has(p.parentUnion)) p.parentUnion = null; });
   out.relations = (Array.isArray(d.relations) ? d.relations : []).filter(r => r && r.id && ids.has(String(r.a)) && ids.has(String(r.b)) && r.a !== r.b).map(r => ({
-    id: String(r.id), a: String(r.a), b: String(r.b), type: REL_LABEL[r.type] ? r.type : 'close'
+    id: String(r.id), a: String(r.a), b: String(r.b), type: has(REL_LABEL, r.type) ? r.type : 'close'
   }));
   let max = 0;
   for (const x of [...out.people, ...out.unions, ...out.relations]) max = Math.max(max, num(x.id));
@@ -631,7 +652,8 @@ function computeLayout(d) {
     if (u.b) { adj.get(u.a).push([u.b, 0]); adj.get(u.b).push([u.a, 0]); }
     for (const k of kidsOf.get(u.id)) for (const m of [u.a, u.b]) if (m) { adj.get(m).push([k.id, 1]); adj.get(k.id).push([m, -1]); }
   }
-  const gen = new Map();
+  const gen = new Map(), compOf = new Map();
+  let nComp = 0;
   for (const p of people) {
     if (gen.has(p.id)) continue;
     const comp = [p.id], q = [p.id];
@@ -641,7 +663,8 @@ function computeLayout(d) {
       for (const [n, dd] of adj.get(c)) if (!gen.has(n)) { gen.set(n, gen.get(c) + dd); q.push(n); comp.push(n); }
     }
     const mn = Math.min(...comp.map(id => gen.get(id)));
-    comp.forEach(id => gen.set(id, gen.get(id) - mn));
+    comp.forEach(id => { gen.set(id, gen.get(id) - mn); compOf.set(id, nComp); });
+    nComp++;
   }
 
   // clusters = people of one generation joined by partnerships
@@ -662,17 +685,36 @@ function computeLayout(d) {
     clusters.push(c);
     order.forEach((id, k) => { clusterOf.set(id, c); kIn.set(id, k); });
   }
-  const depth = new Map(), side = new Map();
+  const depth = new Map(), side = new Map(), anchor = new Map(), gapUsed = new Set();
+  const span = u => { const i = kIn.get(u.a), j = kIn.get(u.b); return [Math.min(i, j), Math.max(i, j)]; };
+  const inOne = u => u.b && clusterOf.get(u.a) === clusterOf.get(u.b);
   for (const u of unions) {
-    if (u.b) {
-      const same = clusterOf.get(u.a) === clusterOf.get(u.b);
-      const between = same ? Math.abs(kIn.get(u.a) - kIn.get(u.b)) - 1 : 0;
-      depth.set(u.id, UNION_DROP + 12 * Math.max(0, between));
-    } else {
-      const c = clusterOf.get(u.a), k = kIn.get(u.a);
-      side.set(u.id, c.members.length > 1 && k === 0 ? -1 : 1);
-      depth.set(u.id, UNION_DROP);
+    if (!u.b) continue;
+    if (!inOne(u)) { depth.set(u.id, UNION_DROP); continue; }
+    const c = clusterOf.get(u.a), [lo, hi] = span(u);
+    // neighbouring unions of one partner get different depths, so they never read as one line
+    depth.set(u.id, UNION_DROP + 12 * (hi - lo - 1) + (c.members.length > 2 ? 12 * (lo % 2) : 0));
+    if (hi - lo === 1) gapUsed.add(c.members[lo]);
+  }
+  // a union drawn past another partner drops its children from a free gap, not through that partner
+  for (const u of unions) {
+    if (!inOne(u)) continue;
+    const c = clusterOf.get(u.a), [lo, hi] = span(u);
+    if (hi - lo < 2) continue;
+    for (let j = hi - 1; j >= lo; j--) {
+      if (gapUsed.has(c.members[j])) continue;
+      gapUsed.add(c.members[j]);
+      anchor.set(u.id, [c.members[j], c.members[j + 1]]);
+      break;
     }
+  }
+  for (const u of unions) {
+    if (u.b) continue;
+    const c = clusterOf.get(u.a), k = kIn.get(u.a), sd = c.members.length > 1 && k === 0 ? -1 : 1;
+    side.set(u.id, sd);
+    // a partner on the same side: run below that partnership's line
+    const pd = unionsOf.get(u.a).filter(v => v.b && depth.has(v.id)).map(v => depth.get(v.id));
+    depth.set(u.id, sd === 1 && k < c.members.length - 1 && pd.length ? Math.max(...pd) + 14 : UNION_DROP);
   }
 
   // horizontal placement
@@ -681,12 +723,19 @@ function computeLayout(d) {
   const gens = [...rows.keys()].sort((a, b) => a - b);
   for (const g of gens) rows.get(g).sort((a, b) => a.idx - b.idx);
   const X = new Map();
-  const width = c => (c.members.length - 1) * PARTNER_GAP;
-  const Lof = c => X.get(c.members[0]);
-  const setL = (c, L) => c.members.forEach((id, k) => X.set(id, L + k * PARTNER_GAP));
-  const center = c => Lof(c) + width(c) / 2;
-  const uc = u => (u.b ? (X.get(u.a) + X.get(u.b)) / 2 : X.get(u.a) + side.get(u.id) * SINGLE_OFF);
   const hasSingleKids = (id, sd) => unionsOf.get(id).some(u => !u.b && side.get(u.id) === sd && kidsOf.get(u.id).length);
+  // a single-parent descent between two partners needs room of its own
+  const gapAt = (c, k) => PARTNER_GAP + (k < c.members.length - 1 && hasSingleKids(c.members[k], 1) ? 50 : 0);
+  const width = c => { let w = 0; for (let k = 0; k < c.members.length - 1; k++) w += gapAt(c, k); return w; };
+  const Lof = c => X.get(c.members[0]);
+  const setL = (c, L) => { let x = L; c.members.forEach((id, k) => { X.set(id, x); x += gapAt(c, k); }); };
+  const center = c => Lof(c) + width(c) / 2;
+  const dropOff = new Map();   // descent lines slid away from the midpoint (see repel)
+  const uc = u => {
+    if (!u.b) return X.get(u.a) + side.get(u.id) * SINGLE_OFF;
+    const an = anchor.get(u.id) || [u.a, u.b];
+    return (X.get(an[0]) + X.get(an[1])) / 2 + (dropOff.get(u.id) || 0);
+  };
   const extra = (c1, c2) => (hasSingleKids(c1.members[c1.members.length - 1], 1) ? SINGLE_OFF / 2 : 0) + (c2 && hasSingleKids(c2.members[0], -1) ? SINGLE_OFF / 2 : 0);
   const offsets = row => { const o = []; let acc = 0; row.forEach((c, i) => { o.push(acc); acc += width(c) + SIB_GAP + extra(c, row[i + 1]); }); return o; };
   const spanCenter = ks => { let mn = Infinity, mx = -Infinity; for (const k of ks) { const x = X.get(k.id); if (x < mn) mn = x; if (x > mx) mx = x; } return (mn + mx) / 2; };
@@ -741,7 +790,7 @@ function computeLayout(d) {
     const o = offsets(row), t = [], w = [];
     if (mode === 'down') {
       const packed = new Map();
-      row.forEach((c, i) => c.members.forEach((id, k) => packed.set(id, o[i] + k * PARTNER_GAP)));
+      row.forEach((c, i) => { let x = o[i]; c.members.forEach((id, k) => { packed.set(id, x); x += gapAt(c, k); }); });
       const shift = new Map();
       for (const c of row) for (const uid of bloodU(c)) {
         if (shift.has(uid)) continue;
@@ -773,6 +822,44 @@ function computeLayout(d) {
     const y = pav(t, w);
     row.forEach((c, i) => setL(c, y[i] + o[i]));
   };
+  // a person standing right under another couple's descent line looks like their child:
+  // slide that descent line along its union line, or else move the person aside
+  const REPEL = 32;
+  const repel = g => {
+    const row = rows.get(g);
+    const drops = unions.filter(u => kidsOf.get(u.id).some(k => gen.get(k.id) === g));
+    const foreign = (id, u) => PM.get(id).parentUnion !== u.id;
+    const clashes = () => {
+      const out = [];
+      for (const c of row) for (const m of c.members) for (const u of drops) if (foreign(m, u) && Math.abs(X.get(m) - uc(u)) < REPEL) out.push({ c, m, u });
+      return out;
+    };
+    for (let it = 0; it < 3; it++) {
+      let cs = clashes();
+      if (!cs.length) return;
+      let slid = false;
+      for (const { m, u } of cs) {
+        if (!u.b || Math.abs(X.get(m) - uc(u)) >= REPEL) continue;
+        const an = anchor.get(u.id) || [u.a, u.b], xa = X.get(an[0]), xb = X.get(an[1]), base = (xa + xb) / 2;
+        const lo = Math.min(xa, xb) + S / 2 + 14, hi = Math.max(xa, xb) - S / 2 - 14;
+        const free = x => x >= lo && x <= hi && row.every(c => c.members.every(id => !foreign(id, u) || Math.abs(X.get(id) - x) >= REPEL));
+        const cand = [X.get(m) - REPEL, X.get(m) + REPEL].filter(free).sort((p, q) => Math.abs(p - uc(u)) - Math.abs(q - uc(u)));
+        if (cand.length) { dropOff.set(u.id, cand[0] - base); slid = true; }
+      }
+      if (slid) { placeRow(g, 'down', false); cs = clashes(); if (!cs.length) return; }
+      const shift = new Map();
+      for (const { c, m, u } of cs) {
+        const ux = uc(u), dx = X.get(m) - ux;
+        // step towards the person's own parents when there are any
+        const own = PM.get(m).parentUnion, ou = own && UM.get(own), dir = (ou && Math.sign(uc(ou) - ux)) || (dx >= 0 ? 1 : -1);
+        const need = dir * REPEL - dx;
+        if (!shift.has(c) || Math.abs(need) > Math.abs(shift.get(c))) shift.set(c, need);
+      }
+      const o = offsets(row);
+      const y = pav(row.map((c, i) => Lof(c) + (shift.get(c) || 0) - o[i]), row.map(c => (shift.has(c) ? 10 : 1)));
+      row.forEach((c, i) => setL(c, y[i] + o[i]));
+    }
+  };
   for (const g of gens) { const row = rows.get(g), o = offsets(row); row.forEach((c, i) => setL(c, o[i])); }
   if (gens.length > 1) {
     for (let it = 0; it < 8; it++) {
@@ -780,14 +867,44 @@ function computeLayout(d) {
       for (let i = 1; i < gens.length; i++) placeRow(gens[i], 'down', re);
       for (let i = gens.length - 2; i >= 0; i--) placeRow(gens[i], 'up', re);
     }
-    for (let i = 1; i < gens.length; i++) placeRow(gens[i], 'down', false);
+    for (let i = 1; i < gens.length; i++) { placeRow(gens[i], 'down', false); repel(gens[i]); }
+  }
+  // families that nobody links together are packed side by side instead of drifting apart
+  if (nComp > 1) {
+    const ext = Array.from({ length: nComp }, () => new Map());   // generation -> [min x, max x]
+    const extend = (c, g, x) => { const v = ext[c].get(g); ext[c].set(g, v ? [Math.min(v[0], x), Math.max(v[1], x)] : [x, x]); };
+    for (const p of people) extend(compOf.get(p.id), gen.get(p.id), X.get(p.id));
+    for (const u of unions) if (!u.b && kidsOf.get(u.id).length) extend(compOf.get(u.a), gen.get(u.a), uc(u));
+    const lo = c => Math.min(...[...ext[c].values()].map(v => v[0]));
+    const order = [...ext.keys()].sort((a, b) => lo(a) - lo(b));
+    const acc = new Map();
+    let accMax = null;
+    for (const c of order) {
+      let s = 0;
+      if (accMax != null) {
+        s = -Infinity;
+        for (const [g, [mn]] of ext[c]) if (acc.has(g)) s = Math.max(s, acc.get(g) + SIB_GAP - mn);
+        if (s === -Infinity) s = accMax + SIB_GAP - lo(c);
+      }
+      for (const p of people) if (compOf.get(p.id) === c) X.set(p.id, X.get(p.id) + s);
+      for (const [g, [, mx]] of ext[c]) acc.set(g, Math.max(acc.has(g) ? acc.get(g) : -Infinity, mx + s));
+      accMax = Math.max(accMax == null ? -Infinity : accMax, ...[...ext[c].values()].map(v => v[1] + s));
+    }
   }
 
   // text and vertical placement
   const TB = new Map(people.map(p => [p.id, textBlock(p)]));
+  // union lines that pass under a partner standing between the couple
+  const passDepth = new Map();
+  for (const u of unions) {
+    if (!inOne(u)) continue;
+    const [lo, hi] = span(u);
+    for (const m of clusterOf.get(u.a).members.slice(lo + 1, hi)) passDepth.set(m, Math.max(passDepth.get(m) || 0, depth.get(u.id)));
+  }
   const textTop = p => {
-    const h = halfOf(p.kind, S), us = unionsOf.get(p.id);
-    return us.length ? h + Math.max(...us.map(u => depth.get(u.id))) + 10 : h + 8;
+    const ds = unionsOf.get(p.id).map(u => depth.get(u.id));
+    if (passDepth.has(p.id)) ds.push(passDepth.get(p.id));
+    return halfOf(p.kind, S) + (ds.length ? Math.max(...ds) + 10 : 8);
   };
   const sibLevel = new Map(), rowLevels = new Map();
   for (const g of gens) {
@@ -829,11 +946,86 @@ function computeLayout(d) {
     x0 = Math.min(x0, q.x - hw); x1 = Math.max(x1, q.x + hw);
     y0 = Math.min(y0, q.y - h); y1 = Math.max(y1, q.y + textTop(p) + tb.h);
   }
-  for (const u of unions) if (!u.b) {
-    const cx = pos.get(u.a).x + side.get(u.id) * SINGLE_OFF;
-    x0 = Math.min(x0, cx); x1 = Math.max(x1, cx);
+  // relation lines must not run through other symbols or twin connectors; text only breaks ties,
+  // because its white box keeps it readable anyway
+  const obst = [];
+  for (const p of people) {
+    const q = pos.get(p.id), h = halfOf(p.kind, S), tb = TB.get(p.id);
+    obst.push({ id: p.id, w: 3, x0: q.x - h - 5, y0: q.y - h - 5, x1: q.x + h + 5, y1: q.y + h + 5 });
+    if (tb.h) { const top = q.y + textTop(p); obst.push({ id: p.id, text: true, w: 0.05, x0: q.x - tb.w / 2 - 2, y0: top, x1: q.x + tb.w / 2 + 2, y1: top + tb.h }); }
   }
-  return { d, PM, UM, pos, gen, rowY, kidsOf, unionsOf, depth, side, sibLevel, TB, textTop, bounds: { x0, y0, x1, y1 } };
+  for (const ks of kidsOf.values()) for (const grp of siblingBlocks(ks)) for (let i = 1; i < grp.length; i++) {
+    const qa = pos.get(grp[i - 1].id), qb = pos.get(grp[i].id);
+    const xa = qa.x + halfOf(grp[i - 1].kind, S), xb = qb.x - halfOf(grp[i].kind, S);
+    obst.push({ id: null, w: 2, x0: Math.min(xa, xb), y0: Math.min(qa.y, qb.y) - 4, x1: Math.max(xa, xb), y1: Math.max(qa.y, qb.y) + 4 });
+  }
+  const routes = new Map();
+  for (const r of d.relations || []) {
+    const A = pos.get(r.a), B = pos.get(r.b);
+    if (!A || !B) continue;
+    const ha = halfOf(PM.get(r.a).kind, S) + 4, hb = halfOf(PM.get(r.b).kind, S) + 4, len = Math.hypot(B.x - A.x, B.y - A.y);
+    if (len < ha + hb + 8) continue;
+    const pts = routeRelation(A, B, ha, hb, len, r, obst);
+    // the cutoff marks must not hide behind someone's text
+    let mid = 0.5;
+    if (r.type === 'cutoff') {
+      const along = f => { const t = f * (pts.length - 1), i = Math.min(pts.length - 2, Math.floor(t)), s = t - i; return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * s, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * s]; };
+      mid = [0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74].find(f => {
+        const [x, y] = along(f);
+        return !obst.some(o => (o.text || (o.id !== r.a && o.id !== r.b)) && x > o.x0 - 10 && x < o.x1 + 10 && y > o.y0 - 10 && y < o.y1 + 10);
+      }) || 0.5;
+    }
+    routes.set(r.id, { pts, mid });
+    for (const [x, y] of pts) { x0 = Math.min(x0, x - 10); x1 = Math.max(x1, x + 10); y0 = Math.min(y0, y - 10); y1 = Math.max(y1, y + 10); }
+  }
+  const noteLines = new Map();
+  for (const u of unions) {
+    if (!u.b) {
+      const cx = pos.get(u.a).x + side.get(u.id) * SINGLE_OFF;
+      x0 = Math.min(x0, cx); x1 = Math.max(x1, cx);
+    } else if (u.note && u.note.trim()) {
+      // at most three short lines fit between the partners; the full note stays in the panel
+      const maxW = PARTNER_GAP - S - 12;
+      let nl = wrap(u.note.trim(), NOTE_F.font, maxW);
+      if (nl.length > NOTE_LINES) {
+        let t = nl[NOTE_LINES - 1];
+        while (t.length > 1 && measure(t + '…', NOTE_F.font) > maxW) t = t.slice(0, -1);
+        nl = nl.slice(0, NOTE_LINES - 1).concat([t.trimEnd() + '…']);
+      }
+      noteLines.set(u.id, nl);
+      const A = pos.get(u.a), B = pos.get(u.b), an = anchor.get(u.id) || [u.a, u.b], cx = (pos.get(an[0]).x + pos.get(an[1]).x) / 2;
+      const yl = Math.max(A.y + halfOf(PM.get(u.a).kind, S), B.y + halfOf(PM.get(u.b).kind, S)) + depth.get(u.id);
+      const w = Math.max(0, ...nl.map(t => measure(t, NOTE_F.font)));
+      x0 = Math.min(x0, cx - w / 2 - 2); x1 = Math.max(x1, cx + w / 2 + 2);
+      y0 = Math.min(y0, yl - 10 - (nl.length - 1) * NOTE_F.lh - NOTE_F.size);
+    }
+  }
+  return { d, PM, UM, pos, gen, rowY, kidsOf, unionsOf, depth, side, anchor, dropOff, noteLines, routes, sibLevel, TB, textTop, bounds: { x0, y0, x1, y1 } };
+}
+// straight when nothing is in the way, otherwise the gentlest curve that crosses the least
+function routeRelation(A, B, ha, hb, len, r, obst) {
+  const ux = (B.x - A.x) / len, uy = (B.y - A.y) / len;
+  let nx = -uy, ny = ux;
+  if (ny > 0 || (ny === 0 && nx > 0)) { nx = -nx; ny = -ny; }   // try bending upwards first: the text is below
+  let best = null;
+  for (const bend of [0, 0.2, -0.2, 0.32, -0.32, 0.45, -0.45]) {
+    const cx = (A.x + B.x) / 2 + nx * bend * len, cy = (A.y + B.y) / 2 + ny * bend * len;
+    const [e0, e1] = [[A, ha], [B, hb]].map(([P, h]) => { const vx = cx - P.x, vy = cy - P.y, l = Math.hypot(vx, vy) || 1; return [P.x + vx / l * h, P.y + vy / l * h]; });
+    const pts = [e0];
+    if (bend) for (let i = 1; i < 24; i++) {
+      const t = i / 24, a = (1 - t) * (1 - t), b = 2 * t * (1 - t), c = t * t;
+      pts.push([a * e0[0] + b * cx + c * e1[0], a * e0[1] + b * cy + c * e1[1]]);
+    }
+    pts.push(e1);
+    let cost = Math.abs(bend);
+    for (const o of obst) {
+      if (!o.text && (o.id === r.a || o.id === r.b)) continue;
+      for (let i = 1; i < pts.length; i++) if (segHits(pts[i - 1], pts[i], o)) { cost += o.w; break; }
+    }
+    if (!best || cost < best.cost) best = { cost, pts };
+    if (!cost) break;
+  }
+  return best.pts;
 }
 
 // ---------- drawing primitives ----------
@@ -856,30 +1048,65 @@ function symbolSVG(o, x, y, size) {
   }
   return s;
 }
-function zigzag(x1, y1, ux, uy, nx, ny, len, amp, step) {
-  const n = Math.max(2, Math.round(len / step)), st = len / n;
-  const pts = [`${rd(x1)},${rd(y1)}`];
-  for (let i = 1; i < n; i++) { const s = i * st, a = i % 2 ? amp : -amp; pts.push(`${rd(x1 + ux * s + nx * a)},${rd(y1 + uy * s + ny * a)}`); }
-  pts.push(`${rd(x1 + ux * len)},${rd(y1 + uy * len)}`);
-  return `<polyline points="${pts.join(' ')}" fill="none"/>`;
-}
-function relationSVG(type, x1, y1, x2, y2, k = 1) {
-  const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
-  const ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
-  const off = o => ln(x1 + nx * o, y1 + ny * o, x2 + nx * o, y2 + ny * o);
+const ptsAttr = ps => ps.map(p => rd(p[0]) + ',' + rd(p[1])).join(' ');
+// a relation line along a polyline: a straight segment, or a sampled curve around other people
+function relationPath(type, pts, k = 1, mid = 0.5) {
+  const n = pts.length, cum = [0];
+  for (let i = 1; i < n; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const len = cum[n - 1] || 1;
+  const at = s => {
+    let i = 1;
+    while (i < n - 1 && cum[i] < s) i++;
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], sl = cum[i] - cum[i - 1] || 1, t = Math.min(1, Math.max(0, (s - cum[i - 1]) / sl));
+    return { x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t, ux: (x1 - x0) / sl, uy: (y1 - y0) / sl };
+  };
+  const poly = (ps, extra = '') => (ps.length === 2 ? ln(ps[0][0], ps[0][1], ps[1][0], ps[1][1], extra) : `<polyline points="${ptsAttr(ps)}" fill="none" stroke-linejoin="round" ${extra}/>`);
+  const normals = pts.map((p, i) => {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+    return [-dy / l, dx / l];
+  });
+  const off = o => poly(pts.map((p, i) => [p[0] + normals[i][0] * o, p[1] + normals[i][1] * o]));
+  const zig = (amp, step) => {
+    const m = Math.max(2, Math.round(len / step)), st = len / m, out = [pts[0]];
+    for (let i = 1; i < m; i++) { const q = at(i * st), a = i % 2 ? amp : -amp; out.push([q.x - q.uy * a, q.y + q.ux * a]); }
+    out.push(pts[n - 1]);
+    return `<polyline points="${ptsAttr(out)}" fill="none"/>`;
+  };
   switch (type) {
-    case 'very_close': return ln(x1, y1, x2, y2, `stroke-width="${rd(5 * k)}" stroke-linecap="butt"`);
+    case 'very_close': return poly(pts, `stroke-width="${rd(5 * k)}" stroke-linecap="butt"`);
     case 'close': return off(-4 * k) + off(0) + off(4 * k);
-    case 'close_conflict': return off(-3 * k) + off(3 * k) + zigzag(x1, y1, ux, uy, nx, ny, len, 7 * k, 8 * k);
-    case 'distant': return ln(x1, y1, x2, y2, `stroke-dasharray="${rd(6 * k)} ${rd(5 * k)}" stroke-linecap="butt"`);
-    case 'conflict': return zigzag(x1, y1, ux, uy, nx, ny, len, 6 * k, 9 * k);
+    case 'close_conflict': return off(-3 * k) + off(3 * k) + zig(7 * k, 8 * k);
+    case 'distant': return poly(pts, `stroke-dasharray="${rd(6 * k)} ${rd(5 * k)}" stroke-linecap="butt"`);
+    case 'conflict': return zig(6 * k, 9 * k);
     case 'cutoff': {
-      const m = len / 2, g = 6 * k, b = 8 * k;
-      const ax = x1 + ux * (m - g), ay = y1 + uy * (m - g), bx = x1 + ux * (m + g), by = y1 + uy * (m + g);
-      return ln(x1, y1, ax, ay) + ln(bx, by, x2, y2) + ln(ax + nx * b, ay + ny * b, ax - nx * b, ay - ny * b) + ln(bx + nx * b, by + ny * b, bx - nx * b, by - ny * b);
+      const m = len * mid, g = 6 * k, b = 8 * k, A = at(m - g), B = at(m + g);
+      const tick = P => ln(P.x - P.uy * b, P.y + P.ux * b, P.x + P.uy * b, P.y - P.ux * b);
+      const first = pts.filter((p, i) => cum[i] < m - g).concat([[A.x, A.y]]);
+      const last = [[B.x, B.y]].concat(pts.filter((p, i) => cum[i] > m + g));
+      return poly(first) + poly(last) + tick(A) + tick(B);
     }
   }
-  return ln(x1, y1, x2, y2);
+  return poly(pts);
+}
+function relationSVG(type, x1, y1, x2, y2, k = 1) {
+  return relationPath(type, [[x1, y1], [x2, y2]], k);
+}
+// where a twin's leg meets the symbol: the inner top corner of a square, the rim of a circle
+function twinFoot(o, x, y, h, ax, ay, inner) {
+  if (o.sex === 'F') { const dx = x - ax, dy = y - ay, l = Math.hypot(dx, dy) || 1; return { x: x - dx / l * h, y: y - dy / l * h }; }
+  return { x: x + inner * h, y: y - h };
+}
+// does the segment p-q cross the rectangle r (Liang–Barsky clipping)
+function segHits(p, q, r) {
+  const dx = q[0] - p[0], dy = q[1] - p[1];
+  let t0 = 0, t1 = 1;
+  const clip = (pp, qq) => {
+    if (pp === 0) return qq >= 0;
+    const t = qq / pp;
+    if (pp < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; }
+    return true;
+  };
+  return clip(-dx, p[0] - r.x0) && clip(dx, r.x1 - p[0]) && clip(-dy, p[1] - r.y0) && clip(dy, r.y1 - p[1]);
 }
 function slashes(x, y, n, k = 1) {
   let s = '';
@@ -896,7 +1123,9 @@ function unionGeom(L, u) {
   if (!u.b) { const yl = A.y + ha + L.depth.get(u.id); return { single: true, xa: A.x, ya: A.y + ha, yl, cx: A.x + L.side.get(u.id) * SINGLE_OFF }; }
   const B = L.pos.get(u.b), hb = halfOf(L.PM.get(u.b).kind, S);
   const yl = Math.max(A.y + ha, B.y + hb) + L.depth.get(u.id);
-  return { xa: A.x, ya: A.y + ha, xb: B.x, yb: B.y + hb, yl, cx: (A.x + B.x) / 2 };
+  const an = L.anchor.get(u.id), mx = an ? (L.pos.get(an[0]).x + L.pos.get(an[1]).x) / 2 : (A.x + B.x) / 2;
+  const off = L.dropOff.get(u.id) || 0;
+  return { xa: A.x, ya: A.y + ha, xb: B.x, yb: B.y + hb, yl, mx, off, cx: mx + off };
 }
 function sibLineY(L, u) {
   const kids = L.kidsOf.get(u.id);
@@ -911,7 +1140,6 @@ function genogramInner(L, opts = {}) {
     const w = measure(t, f.font);
     backs += `<rect x="${rd(x - w / 2 - 2)}" y="${rd(base - f.size * 0.85)}" width="${rd(w + 4)}" height="${rd(f.size * 1.12)}"/>`;
   };
-  const NOTE = { font: '10.5px Arial', size: 10.5 };
   const DASH = 'stroke-dasharray="5 4" stroke-linecap="butt"';
 
   for (const u of d.unions) {
@@ -922,11 +1150,14 @@ function genogramInner(L, opts = {}) {
       lines += ln(g.xa, g.ya, g.xa, g.yl) + ln(g.xb, g.yb, g.xb, g.yl);
       lines += ln(g.xa, g.yl, g.xb, g.yl, u.type === 'informal' ? 'stroke-dasharray="7 5" stroke-linecap="butt"' : '');
       const n = u.type === 'separated' ? 1 : u.type === 'divorced' ? 2 : 0;
-      if (n) lines += slashes(kids.length ? g.cx - 22 : g.cx, g.yl, n);
-      if (u.note && u.note.trim()) {
-        back(g.cx, g.yl - 10, u.note.trim(), NOTE);
-        texts += `<text x="${rd(g.cx)}" y="${rd(g.yl - 10)}" font-size="10.5">${esc(u.note.trim())}</text>`;
-      }
+      if (n) lines += slashes(kids.length ? g.cx + (g.off < 0 ? 22 : -22) : g.cx, g.yl, n);
+      // the note stands above the union line, in the gap between the partners
+      const nl = L.noteLines.get(u.id);
+      if (nl) nl.forEach((t, i) => {
+        const by = g.yl - 10 - (nl.length - 1 - i) * NOTE_F.lh;
+        back(g.mx, by, t, NOTE_F);
+        texts += `<text x="${rd(g.mx)}" y="${rd(by)}" font-size="${NOTE_F.size}">${esc(t)}</text>`;
+      });
     }
     const sy = sibLineY(L, u);
     if (sy != null) {
@@ -940,12 +1171,12 @@ function genogramInner(L, opts = {}) {
         } else {
           const ax = mean(qs.map(q => q.x));
           xs.push(ax);
-          const tops = grp.map((k, i) => ({ x: qs[i].x, y: qs[i].y - halfOf(k.kind, S) }));
-          grp.forEach((k, i) => { lines += ln(ax, sy, tops[i].x, tops[i].y, k.adopted ? DASH : ''); });
-          if (grp[0].twinType === 'identical') {
-            const f = tops[0], l = tops[tops.length - 1];
-            lines += ln(ax + (f.x - ax) / 2, sy + (f.y - sy) / 2, ax + (l.x - ax) / 2, sy + (l.y - sy) / 2);
-          }
+          grp.forEach((k, i) => {
+            const f = twinFoot(k, qs[i].x, qs[i].y, halfOf(k.kind, S), ax, sy, i === 0 ? 1 : i === grp.length - 1 ? -1 : 0);
+            lines += ln(ax, sy, f.x, f.y, k.adopted ? DASH : '');
+          });
+          // as on the form: a line between the twins' symbols, for both kinds of twins
+          for (let i = 1; i < grp.length; i++) lines += ln(qs[i - 1].x + halfOf(grp[i - 1].kind, S), qs[i - 1].y, qs[i].x - halfOf(grp[i].kind, S), qs[i].y);
         }
       }
       lines += ln(g.cx, g.yl, g.cx, sy);
@@ -961,17 +1192,13 @@ function genogramInner(L, opts = {}) {
   }
 
   for (const r of d.relations) {
-    const A = L.pos.get(r.a), B = L.pos.get(r.b);
-    if (!A || !B) continue;
-    const ha = halfOf(L.PM.get(r.a).kind, S) + 4, hb = halfOf(L.PM.get(r.b).kind, S) + 4;
-    const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy);
-    if (len < ha + hb + 8) continue;
-    const ux = dx / len, uy = dy / len;
-    const x1 = A.x + ux * ha, y1 = A.y + uy * ha, x2 = B.x - ux * hb, y2 = B.y - uy * hb;
-    rels += relationSVG(r.type, x1, y1, x2, y2);
+    const rt = L.routes.get(r.id);
+    if (!rt) continue;
+    const pts = rt.pts;
+    rels += relationPath(r.type, pts, 1, rt.mid);
     if (!print) {
-      hits += `<line x1="${rd(x1)}" y1="${rd(y1)}" x2="${rd(x2)}" y2="${rd(y2)}" stroke="transparent" stroke-width="14" data-rid="${esc(r.id)}" style="cursor:pointer"/>`;
-      if (cur && cur.type === 'rel' && cur.id === r.id) hl += `<line x1="${rd(x1)}" y1="${rd(y1)}" x2="${rd(x2)}" y2="${rd(y2)}" stroke="#93c5fd" stroke-width="16" stroke-linecap="round"/>`;
+      hits += `<polyline points="${ptsAttr(pts)}" fill="none" stroke="transparent" stroke-width="14" data-rid="${esc(r.id)}" style="cursor:pointer"/>`;
+      if (cur && cur.type === 'rel' && cur.id === r.id) hl += `<polyline points="${ptsAttr(pts)}" fill="none" stroke="#93c5fd" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`;
     }
   }
 
@@ -997,10 +1224,11 @@ function genogramInner(L, opts = {}) {
     }
   }
 
+  // white boxes go under the symbols, so a long note never erases a symbol's outline
   return hl +
     `<g stroke="#000" stroke-width="1.6" fill="none" stroke-linecap="round">${lines}${rels}</g>` +
-    `<g stroke="#000" stroke-width="1.6">${syms}</g>` +
     `<g fill="#fff" stroke="none">${backs}</g>` +
+    `<g stroke="#000" stroke-width="1.6">${syms}</g>` +
     `<g font-family="Arial, Helvetica, sans-serif" text-anchor="middle" fill="#000">${texts}</g>` +
     hits;
 }
@@ -1057,10 +1285,11 @@ function legendSymbol(it) {
     const c = it.child, y = 31, top = y - halfOf(c.kind, 24);
     s = ln(W / 2, 2, W / 2, top, c.adopted ? 'stroke-dasharray="4 3" stroke-linecap="butt"' : '') + symbolSVG(c, W / 2, y, 24);
   } else if (it.twins) {
-    const ax = W / 2, ay = 5, y = 46, lx = 38, rx = 82, t1 = y - z / 2;
-    s = ln(ax, ay, lx, t1) + ln(ax, ay, rx, t1);
-    if (it.twins === 'identical') s += ln((ax + lx) / 2, (ay + t1) / 2, (ax + rx) / 2, (ay + t1) / 2);
-    s += symbolSVG({ sex: 'M' }, lx, y, z) + symbolSVG({ sex: it.twins === 'identical' ? 'M' : 'F' }, rx, y, z);
+    const ax = W / 2, ay = 5, y = 46, lx = 38, rx = 82, h = z / 2;
+    const a = { sex: 'M' }, b = { sex: it.twins === 'identical' ? 'M' : 'F' };
+    const fa = twinFoot(a, lx, y, h, ax, ay, 1), fb = twinFoot(b, rx, y, h, ax, ay, -1);
+    s = ln(ax, ay, fa.x, fa.y) + ln(ax, ay, fb.x, fb.y) + ln(lx + h, y, rx - h, y);
+    s += symbolSVG(a, lx, y, z) + symbolSVG(b, rx, y, z);
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"${tall ? ' class="tall"' : ''}><g stroke="#000" stroke-width="1.4" fill="none" stroke-linecap="round">${s}</g></svg>`;
 }
@@ -1158,7 +1387,13 @@ function personPanel(p) {
       if (cand.length) {
         const tw = p.twin ? sibs.find(s => s !== p && s.twin === p.twin) : null;
         h += fld('Bliźnię z', `<select data-act="twin"><option value="">— nie —</option>${cand.map(s => `<option value="${esc(s.id)}"${tw === s ? ' selected' : ''}>${esc(displayName(s))}</option>`).join('')}</select>`);
-        if (p.twin) h += fld('Rodzaj bliźniąt', `<select data-scope="person" data-f="twinType">${opts([['fraternal', 'różnojajowe'], ['identical', 'jednojajowe']], p.twinType)}</select>`);
+        if (p.twin) {
+          h += fld('Rodzaj bliźniąt', `<select data-scope="person" data-f="twinType">${opts([['fraternal', 'różnojajowe'], ['identical', 'jednojajowe']], p.twinType)}</select>`);
+          const mixed = sibs.some(s => s.twin === p.twin && s.sex !== p.sex);
+          h += p.twinType === 'identical' && mixed
+            ? '<p class="hint">Bliźnięta jednojajowe są zawsze tej samej płci – sprawdź płeć obojga.</p>'
+            : '<p class="hint">Jak w kodzie genogramu: bliźnięta łączy linia między symbolami, a jednojajowe rysuje się jako dwie osoby tej samej płci.</p>';
+        }
       }
     }
     h += '</div>';
@@ -1207,6 +1442,7 @@ function unionPanel(u) {
   if (u.b) {
     h += fld('Rodzaj związku', `<select data-scope="union" data-f="type">${opts(Object.entries(UNION_LABEL).filter(([k]) => k !== 'single'), u.type)}</select>`);
     h += fld('Opis przy linii', `<input type="text" data-scope="union" data-f="note" value="${esc(u.note)}" placeholder="np. ślub 1998, rozwód 2015">`);
+    h += '<p class="hint">Na rysunku mieszczą się trzy krótkie linie, dłuższy opis zostanie skrócony.</p>';
   } else {
     h += '<p class="hint">Dzieci jednego rodzica – drugi rodzic nie jest narysowany.</p>';
   }
@@ -1288,11 +1524,15 @@ function fitScale() {
 
 const ACT = {
   newDoc() {
-    if (data.people.length && !confirm('Zacząć nowy genogram? Obecny zniknie z ekranu. Jeśli chcesz go zachować, najpierw kliknij „Zapisz plik”. (Ctrl+Z cofa tę operację.)')) return;
+    const dirty = data.people.length || data.meta.family || data.meta.author || data.meta.header !== DEFAULT_HEADER;
+    if (dirty && !confirm('Zacząć nowy genogram? Obecny zniknie z ekranu. Jeśli chcesz go zachować, najpierw kliknij „Zapisz plik”. (Ctrl+Z cofa tę operację.)')) return;
     change(() => { data = emptyData(); sel = null; });
     fillMeta(); zoom = null; renderSVG();
   },
-  open() { fileInput.value = ''; fileInput.click(); },
+  open() {
+    if (data.people.length && !confirm('Otworzyć inny plik? Obecny genogram na ekranie zostanie zastąpiony. Jeśli go potrzebujesz, najpierw kliknij „Zapisz plik”. (Ctrl+Z cofa tę operację, ale tylko do odświeżenia strony.)')) return;
+    fileInput.value = ''; fileInput.click();
+  },
   save() {
     download(new Blob([JSON.stringify({ app: 'genogram-nr23', ...data }, null, 1)], { type: 'application/json' }), fileBase() + '.json');
     toast('Plik został pobrany (zwykle do folderu „Pobrane”). Otworzysz go przyciskiem „Otwórz plik…”.', 5000);
@@ -1303,7 +1543,7 @@ const ACT = {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${vb.w}" height="${vb.h}" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}"><rect x="${vb.x}" y="${vb.y}" width="${vb.w}" height="${vb.h}" fill="#fff"/>${genogramInner(L, { print: true })}</svg>`;
     const img = new Image();
     img.onload = () => {
-      const k = Math.min(2, 8000 / Math.max(vb.w, vb.h));
+      const k = Math.min(4, 8000 / Math.max(vb.w, vb.h));
       const c = document.createElement('canvas');
       c.width = Math.ceil(vb.w * k); c.height = Math.ceil(vb.h * k);
       const ctx = c.getContext('2d');
@@ -1324,7 +1564,25 @@ const ACT = {
     if (!data.people.some(p => p.dx || p.dy)) { toast('Rysunek jest już ułożony automatycznie.'); return; }
     change(() => data.people.forEach(p => { p.dx = 0; p.dy = 0; }));
   },
-  print() { window.print(); },
+  print() {
+    const land = data.meta.orientation === 'landscape', here = printTextPt(land);
+    if (here == null || here >= MIN_PRINT_PT) { window.print(); return; }
+    const there = printTextPt(!land), better = there > here * 1.15;
+    const pt = v => v.toFixed(1).replace('.', ',');
+    $('#printMsg').textContent = `Rysunek jest szeroki, więc najmniejszy tekst wyjdzie na wydruku bardzo drobny (ok. ${pt(here)} pkt).` +
+      (better ? ` W orientacji ${land ? 'pionowej' : 'poziomej'} będzie większy (ok. ${pt(there)} pkt).` : ' Pomoże skrócenie opisów przy symbolach.');
+    const flip = $('#btnFlip');
+    flip.hidden = !better;
+    flip.textContent = land ? 'Zmień na pionową i drukuj' : 'Zmień na poziomą i drukuj';
+    $('#dlgPrint').showModal();
+  },
+  printAnyway(el) { el.closest('dialog').close(); window.print(); },
+  printFlip(el) {
+    el.closest('dialog').close();
+    change(() => { data.meta.orientation = data.meta.orientation === 'landscape' ? 'portrait' : 'landscape'; }, { panel: false });
+    fillMeta();
+    window.print();
+  },
   help() { $('#dlgHelp').showModal(); },
   legend() { $('#legendBox').innerHTML = legendTable(); $('#dlgLegend').showModal(); },
   closeDlg(el) { el.closest('dialog').close(); },
@@ -1397,7 +1655,9 @@ const ACT = {
   delRel(el) { const id = el.dataset.id; change(() => { data.relations = data.relations.filter(r => r.id !== id); }); },
   deletePerson() {
     const p = P(sel.id); if (!p) return;
-    if (!confirm(`Usunąć „${displayName(p)}”? Usunięte zostaną też relacje tej osoby i jej związki bez dzieci.`)) return;
+    const orphans = data.unions.some(u => u.a === p.id && !u.b && data.people.some(c => c.parentUnion === u.id));
+    const extra = orphans ? ' Dzieci tej osoby zostaną bez rodzica w genogramie.' : '';
+    if (!confirm(`Usunąć „${displayName(p)}”? Usunięte zostaną też relacje tej osoby i jej związki bez dzieci.` + extra)) return;
     change(() => { removePerson(p.id); sel = null; });
   },
   swapUnion() { const u = UN(sel.id); if (!u || !u.b) return; change(() => { const t = u.a; u.a = u.b; u.b = t; }); },
@@ -1487,6 +1747,7 @@ stage.addEventListener('dblclick', e => {
 });
 
 document.addEventListener('keydown', e => {
+  if (document.querySelector('dialog[open]')) return;
   const tag = (e.target.tagName || '').toLowerCase();
   const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
   if ((e.ctrlKey || e.metaKey) && !e.altKey) {
@@ -1494,13 +1755,13 @@ document.addEventListener('keydown', e => {
     if (k === 'z' && !typing) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
     if (k === 'y' && !typing) { e.preventDefault(); redo(); return; }
   }
-  if (typing || document.querySelector('dialog[open]')) return;
+  if (typing) return;
   if (e.key === 'Escape' && sel) { sel = null; render(true); }
   if ((e.key === 'Delete' || e.key === 'Backspace') && sel) {
     e.preventDefault();
     if (sel.type === 'person') ACT.deletePerson();
-    else if (sel.type === 'union') ACT.deleteUnion();
-    else ACT.deleteRelation();
+    else if (sel.type === 'union') { if (confirm('Usunąć ten związek?')) ACT.deleteUnion(); }
+    else if (confirm('Usunąć tę relację?')) ACT.deleteRelation();
   }
 });
 
@@ -1514,8 +1775,7 @@ function headerHTML() {
     return m ? `<div><b>${esc(m[1])}</b>${esc(m[2])}</div>` : `<div>${esc(t)}</div>`;
   }).join('');
 }
-function buildPrint() {
-  const land = data.meta.orientation === 'landscape';
+function buildPrint(land = data.meta.orientation === 'landscape') {
   const W = land ? 277 : 190, H = (land ? 190 : 277) - 1.5;
   $('#pageStyle').textContent = `@page{size:A4 ${land ? 'landscape' : 'portrait'};margin:10mm}`;
   let svg = '';
@@ -1541,7 +1801,18 @@ function buildPrint() {
   }
   $('#print-root').innerHTML = html;
 }
-window.addEventListener('beforeprint', buildPrint);
+// size of the smallest text (descriptions under symbols) on paper, in points
+function printTextPt(land) {
+  if (!data.people.length) return null;
+  buildPrint(land);
+  const root = $('#print-root'), svg = root.querySelector('.p-box svg');
+  root.style.display = 'block';
+  const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+  root.style.display = '';
+  if (!r.width || !vb.width) return null;
+  return TF.i.size * Math.min(r.width / vb.width, r.height / vb.height) * 0.75;
+}
+window.addEventListener('beforeprint', () => buildPrint());
 
 // ---------- example ----------
 function exampleData() {
@@ -1584,8 +1855,18 @@ fillMeta();
 render(true);
 if (loaded) statusEl.textContent = 'Wczytano zapisaną pracę';
 window.addEventListener('resize', () => { if (zoom == null) renderSVG(); });
+// the same page open in another tab saved its work: show that instead of overwriting it later
+window.addEventListener('storage', e => {
+  if (e.key !== STORE_KEY || !e.newValue) return;
+  let d;
+  try { d = normalize(JSON.parse(e.newValue)); } catch (err) { return; }
+  data = d; sel = null; drag = null; frozenView = null;
+  hist.undo.length = 0; hist.redo.length = 0; hist.lastKey = null;
+  fillMeta(); render(true);
+  statusEl.textContent = 'Wczytano zmiany z innej karty';
+});
 // exposed for automated checks only
-window.__genogram = { get data() { return data; }, computeLayout, normalize, exampleData, buildPrint };
+window.__genogram = { get data() { return data; }, computeLayout, normalize, exampleData, buildPrint, printTextPt };
 })();
 </script>
 </body>
